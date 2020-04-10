@@ -1,0 +1,118 @@
+{% extends "base.html" %} {% block title %} Gráficos {% endblock %} {% block
+content %}
+<div class="container" style="padding: 50px 0;">
+  <br />
+  <br />
+  <h1>Bem vindo(a) ao Dashboard COVID-19</h1>
+  <p class="lead">
+    Gráficos informativos e dados do novo coronavírus por município por dia
+  </p>
+  <div class="item" style="padding: 20px;">
+    <!-- <p>{{content}}</p> -->
+
+    <h2>Filtros</h2>
+    <form action="#" method="post">
+      <div class="form-group">
+        <div class="row">
+          <div class="col">
+            <label for="exampleFormControlSelect1">UF: </label>
+            <select class="form-control" id="select_uf" name="select_uf">
+              {% for x in content %}
+              <option value={{x['id']}}>{{x['sigla']}}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col">
+            <label for="exampleFormControlSelect1">Município: </label>
+            <select class="form-control" id="select_municipio" name="select_municipio">
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top: 15;">
+            <div class="col-md">
+                <!-- <input type="submit" value="Enviar" class="btn btn-primary "/>    -->
+                <button type="button" id="btn_send" class="btn btn-primary" data-toggle="button" aria-pressed="false">
+                    Enviar
+                  </button>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top: 15;">
+            <div id="image_div">
+              <!-- <img src="{{user_image}}"  style="width:500px;height:600px;" /> -->
+              <div class="chart" id="bargraph">
+                <script>
+                  {% if plot!='' %}
+                    var graphs = {{plot}} ;
+                    Plotly.plot('bargraph',graphs,{});
+                  {% endif %}
+                </script>
+            </div>
+            </div>
+      </div>
+
+    </div>
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $(document).ready(function (){
+    get_cities($("#select_uf option:first").val());
+  });
+  
+    $("#select_uf").on("change", function () {
+    get_cities(this.value);
+  });
+
+  function get_cities(id_uf){
+    $("#select_municipio").html('');
+
+    var request = $.ajax({
+      url:
+        "https://servicodados.ibge.gov.br/api/v1/localidades/estados/"+id_uf+"/municipios",
+      type: "GET",
+    });
+
+    request.done(function (msg) {
+      for(var i=0; i<msg.length; i++){
+          var o = new Option("option "+msg[i].nome, msg[i].id);
+            $(o).html(msg[i].nome);
+            $("#select_municipio").append(o);
+      }
+    });
+
+    request.fail(function (jqXHR, textStatus) {
+      console.log("Request failed: " + textStatus);
+    });
+  }
+
+  $("#btn_send").on("click", function () {
+    $('#bargraph').html('');
+    var data = {'select_uf': document.getElementById('select_uf').value,
+            'select_municipio': $('#select_municipio option:selected').val()
+            }
+    $.ajax({
+      url: "/output_plot",
+      type: "POST",
+      contentType: 'application/json;charset=UTF-8',
+      data: JSON.stringify(data),
+      dataType:"json",
+      success: function (data) {
+          console.log(data);
+          console.log(typeof data == "string");
+          if(typeof data == "string"){
+            console.log(data);
+            $('#bargraph').html('<p>'+data+'</p>');
+          }
+          else
+            Plotly.newPlot('bargraph', data );
+      }
+  });
+
+  });
+</script>
+{% endblock %}
+
+<!-- 'select_uf': document.getElementById('select_uf').value,
+'select_municipio': 
+$('#select_municipio option:selected').val() -->
